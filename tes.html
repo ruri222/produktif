@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aplikasi Pemesanan</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Tambahan gaya untuk menyembunyikan/munculkan bagian */
+    #menu-page, #cart-page {
+      display: none;
+    }
+    #menu-page.active, #cart-page.active {
+      display: block;
+    }
+
+    .cart-title {
+      font-size: 1.5em;
+      font-weight: bold;
+      margin: 20px;
+    }
+
+    .cart-item {
+      display: flex;
+      align-items: center;
+      margin: 10px;
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .cart-item img {
+      width: 60px;
+      margin-right: 15px;
+      border-radius: 8px;
+    }
+
+    .cart-info {
+      flex-grow: 1;
+    }
+
+    .hapus-btn {
+      background-color: red;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+
+    .bayar-btn {
+      background-color: green;
+      color: white;
+      padding: 10px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .footer {
+      padding: 15px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ✅ Halaman Menu -->
+<div id="menu-page" class="active">
+  <div class="grid-container">
+    <!-- Menu item -->
+    <div class="box" data-name="Nasi Goreng" data-price="10000">
+      <div class="inner-box"><img src="img/nasigoreng.png" alt="Nasi Goreng" class="menu-img" /></div>
+      <div class="nama">Nasi Goreng</div>
+      <div class="harga">Rp 10.000</div>
+    </div>
+    <div class="box" data-name="Ayam Goreng" data-price="15000">
+      <div class="inner-box"><img src="img/ayamgoreng.png" alt="Ayam Goreng" class="menu-img" /></div>
+      <div class="nama">Ayam Goreng</div>
+      <div class="harga">Rp 15.000</div>
+    </div>
+    <!-- Tambah menu lain sesuai kebutuhan -->
+  </div>
+
+  <!-- Ikon Keranjang -->
+  <div class="keranjangglobal" onclick="tampilkanKeranjang()">
+    <img src="img/keranjang.jpg" alt="Keranjang">
+    <span class="cart-count" id="cart-count"></span>
+  </div>
+</div>
+
+<!-- ✅ Halaman Keranjang -->
+<div id="cart-page">
+  <div class="cart-title">Keranjang Belanja</div>
+  <div class="container" id="cart-list"></div>
+  <div class="footer">
+    <div class="subtotal" id="subtotal">SubTotal: Rp 0</div>
+    <button class="bayar-btn" onclick="checkout()">Bayar</button>
+    <br><br>
+    <button onclick="kembaliKeMenu()">Kembali ke Menu</button>
+  </div>
+</div>
+
+<!-- Popup -->
+<div class="popup-overlay" id="popupOverlay">
+  <div class="popup">
+    <img id="popupImage" src="" alt="Menu Image" style="width: 100%; height: auto; border-radius: 8px;" />
+    <h3 id="popupTitle">Nama Menu</h3>
+    <p id="popupPrice">Rp 0</p>
+    <div class="quantity-controls">
+      <button onclick="decreaseQty()">-</button>
+      <span id="quantity">1</span>
+      <button onclick="increaseQty()">+</button>
+    </div>
+    <div class="popup-actions">
+      <button class="icon-cart-btn" onclick="addToCart()">🛒 Tambah</button>
+      <button class="buy-btn" onclick="buyNow()">Pesan</button>
+    </div>
+  </div>
+</div>
+
+<!-- ✅ SCRIPT -->
+<script>
+  const popupOverlay = document.getElementById('popupOverlay');
+  const quantitySpan = document.getElementById('quantity');
+  const popupTitle = document.getElementById('popupTitle');
+  const popupPrice = document.getElementById('popupPrice');
+  const popupImage = document.getElementById('popupImage');
+  const cartCount = document.getElementById('cart-count');
+
+  let selectedMenu = '';
+  let selectedPrice = 0;
+
+  document.querySelectorAll('.box').forEach(box => {
+    box.addEventListener('click', () => {
+      selectedMenu = box.querySelector('.nama').textContent;
+      selectedPrice = box.querySelector('.harga').textContent;
+      popupImage.src = box.querySelector('img').src;
+
+      quantitySpan.textContent = '1';
+      popupTitle.textContent = selectedMenu;
+      popupPrice.textContent = selectedPrice;
+
+      popupOverlay.style.display = 'flex';
+    });
+  });
+
+  function increaseQty() {
+    let qty = parseInt(quantitySpan.textContent);
+    quantitySpan.textContent = qty + 1;
+  }
+
+  function decreaseQty() {
+    let qty = parseInt(quantitySpan.textContent);
+    if (qty > 1) quantitySpan.textContent = qty - 1;
+  }
+
+  function addToCart() {
+    const qty = parseInt(quantitySpan.textContent);
+    const img = popupImage.src;
+    const name = selectedMenu;
+    const price = parseInt(selectedPrice.replace(/[^\d]/g, ''));
+
+    const cartData = JSON.parse(localStorage.getItem('cart')) || {};
+
+    if (cartData[name]) {
+      cartData[name].qty += qty;
+    } else {
+      cartData[name] = { qty, price, img };
+    }
+
+    localStorage.setItem('cart', JSON.stringify(cartData));
+    updateCartCount();
+    alert(`${name} ditambahkan (${qty}x)`);
+    popupOverlay.style.display = 'none';
+  }
+
+  function buyNow() {
+    const qty = parseInt(quantitySpan.textContent);
+    alert(`Anda membeli ${selectedMenu} sebanyak ${qty}`);
+    popupOverlay.style.display = 'none';
+  }
+
+  function updateCartCount() {
+    const cart = JSON.parse(localStorage.getItem('cart')) || {};
+    let total = 0;
+    for (const item in cart) {
+      total += cart[item].qty;
+    }
+    cartCount.textContent = total > 0 ? total : '';
+  }
+
+  document.addEventListener("DOMContentLoaded", updateCartCount);
+
+  popupOverlay.addEventListener('click', (e) => {
+    if (e.target === popupOverlay) {
+      popupOverlay.style.display = 'none';
+    }
+  });
+
+  // ✅ Fungsi tampilkan keranjang
+  function tampilkanKeranjang() {
+    document.getElementById("menu-page").classList.remove("active");
+    document.getElementById("cart-page").classList.add("active");
+    renderCart();
+  }
+
+  function kembaliKeMenu() {
+    document.getElementById("cart-page").classList.remove("active");
+    document.getElementById("menu-page").classList.add("active");
+  }
+
+  // ✅ Fungsi render keranjang
+  function renderCart() {
+    const cartList = document.getElementById("cart-list");
+    const subtotalElem = document.getElementById("subtotal");
+    const cartData = JSON.parse(localStorage.getItem("cart")) || {};
+    cartList.innerHTML = '';
+    let subtotal = 0;
+
+    for (let [name, item] of Object.entries(cartData)) {
+      const total = item.qty * item.price;
+      subtotal += total;
+
+      const div = document.createElement("div");
+      div.className = "cart-item";
+      div.innerHTML = `
+        <img src="${item.img}" alt="${name}">
+        <div class="cart-info">
+          <div class="name">${name}</div>
+          <div class="price">Rp ${item.price}</div>
+          <div class="qty-controls">
+            <button onclick="updateQty('${name}', -1)">-</button>
+            <span>${item.qty}</span>
+            <button onclick="updateQty('${name}', 1)">+</button>
+          </div>
+        </div>
+        <button class="hapus-btn" onclick="removeItem('${name}')">hapus</button>
+      `;
+      cartList.appendChild(div);
+    }
+
+    subtotalElem.textContent = "SubTotal: Rp " + subtotal.toLocaleString("id-ID");
+  }
+
+  function updateQty(name, delta) {
+    const cartData = JSON.parse(localStorage.getItem("cart")) || {};
+    if (!cartData[name]) return;
+    cartData[name].qty += delta;
+    if (cartData[name].qty <= 0) delete cartData[name];
+    localStorage.setItem("cart", JSON.stringify(cartData));
+    renderCart();
+    updateCartCount();
+  }
+
+  function removeItem(name) {
+    const cartData = JSON.parse(localStorage.getItem("cart")) || {};
+    delete cartData[name];
+    localStorage.setItem("cart", JSON.stringify(cartData));
+    renderCart();
+    updateCartCount();
+  }
+
+  function checkout() {
+    alert("Terima kasih! Total: Rp " + calculateSubtotal().toLocaleString("id-ID"));
+    localStorage.removeItem("cart");
+    renderCart();
+    updateCartCount();
+  }
+
+  function calculateSubtotal() {
+    const cartData = JSON.parse(localStorage.getItem("cart")) || {};
+    return Object.values(cartData).reduce((sum, item) => sum + item.price * item.qty, 0);
+  }
+</script>
+
+</body>
+</html>
